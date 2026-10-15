@@ -1,0 +1,18 @@
+# Python
+__pycache__/
+*.py[cod]
+
+# Редакторы и системные файлы
+*.swp
+*~
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Архивы
+*.zip
+*.7z
+*.gz
+*.tar
+*.rar
