@@ -32,9 +32,13 @@ MANUAL = [
 
 
 def clean_env():
+    # Preserve campus network settings, but not variables redirecting installation.
+    pip_network = {'PIP_INDEX_URL', 'PIP_EXTRA_INDEX_URL', 'PIP_CERT',
+                   'PIP_CLIENT_CERT', 'PIP_TRUSTED_HOST', 'PIP_PROXY',
+                   'PIP_TIMEOUT', 'PIP_RETRIES', 'PIP_CONFIG_FILE'}
     env = {k: v for k, v in os.environ.items()
-           if not k.startswith('PIP_') and k not in ('PYTHONHOME', 'PYTHONPATH')}
-    # env['PIP_CONFIG_FILE'] = os.devnull
+           if (not k.startswith('PIP_') or k in pip_network)
+           and k not in ('PYTHONHOME', 'PYTHONPATH')}
     env['PIP_DISABLE_PIP_VERSION_CHECK'] = '1'
     return env
 
@@ -159,7 +163,7 @@ def prepare(target, requirements, wheelhouse, results):
             'install', '--no-input', '--only-binary=:all:', '--no-deps', '-r', requirements]
     if wheelhouse is not None:
         argv += ['--no-index', '--find-links', wheelhouse]
-    print('Установка пакетов' + (' из локального wheelhouse.' if wheelhouse else ' из PyPI.'),
+    print('Установка пакетов' + (' из локального wheelhouse.' if wheelhouse else ' из настроенного источника пакетов.'),
           file=sys.stderr, flush=True)
     evidence = run(argv, timeout=600)
     results.append({'id': 'install-packages', 'status': 'PASS', 'evidence': evidence})
@@ -244,7 +248,7 @@ def shell_behaviour():
         actual = run(['bash', '-o', 'pipefail', '-c', command])['stdout'].strip()
         if actual != expected:
             raise RuntimeError(command + ': ожидается ' + expected + ', получено ' + actual)
-    return 'grep -c; tail -n +2; wc -l; cat; cat -A (portable)'
+    return 'grep -c; tail -n +2; wc -l; cat; tab/newline visibility (Python)'
 
 
 def project_probe(source):
