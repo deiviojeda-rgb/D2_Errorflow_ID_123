@@ -2,12 +2,15 @@
 
 Запуск из корня репозитория:
 
-    python3 tests/test_bank.py        все задания
-    python3 tests/test_bank.py 2      только Задание 2
+    python3 testing/test_bank.py      все задания
+    python3 testing/test_bank.py 2    только Задание 2
 
 Тесты вызывают функции из src/bank.py и сравнивают, что они вернули,
 с тем, что должно получиться. Для каждого задания печатается одна строка:
 «пройдено», «не пройдено» с первой найденной причиной или «не начато».
+
+Тесты Заданий 2, 3 и 8 передают функциям готовые вопросы, поэтому
+не зависят от того, работает ли load_bank.
 """
 
 import os
@@ -37,6 +40,27 @@ SMALL_DIRTY = [
     "12;строки;три;короткий;Уровень словом?;;да",
     "9;числа;5;несколько;Какие числа чётные?;2|3|4;1,3",
 ]
+
+# Готовые вопросы — в том виде, в каком их возвращает load_bank. На них проверяются
+# Задания 2, 3 и 8, поэтому эти тесты не зависят от того, как написана load_bank.
+READY = [
+    {"id": 7, "topic": "числа", "level": 3, "type": "один", "text": "Сколько будет 2 + 2?",
+     "options": ["3", "4", "5"], "answer": "2"},
+    {"id": 8, "topic": "ошибки", "level": 3, "type": "короткий",
+     "text": "Что напечатает код?\nprint(1)\nprint(2)", "options": [], "answer": "2"},
+    {"id": 9, "topic": "числа", "level": 5, "type": "несколько", "text": "Какие числа чётные?",
+     "options": ["2", "3", "4"], "answer": "1,3"},
+]
+MORE = [
+    {"id": 10, "topic": "строки", "level": 1, "type": "один",
+     "text": "Какая функция печатает текст?", "options": ["print", "len"], "answer": "1"},
+    {"id": 11, "topic": "списки", "level": 2, "type": "короткий",
+     "text": "Сколько элементов в [1, 2]?", "options": [], "answer": "2"},
+    {"id": 12, "topic": "строки", "level": 1, "type": "короткий",
+     "text": "Что вернёт len(\"ab\")?", "options": [], "answer": "2"},
+]
+ADDED = {"id": 41, "topic": "числа", "level": 5, "type": "короткий", "text": "Вопрос?",
+         "options": [], "answer": "1"}
 
 
 class NotStarted(Exception):
@@ -75,6 +99,16 @@ def by_id(questions, qid):
     raise Failed("в списке нет вопроса с \"id\" = %d (id должен быть числом)" % qid)
 
 
+def fresh(questions):
+    """Копии готовых вопросов: функция не может испортить данные следующей проверки."""
+    return [dict(question, options=list(question["options"])) for question in questions]
+
+
+def counted(result, name):
+    expect(isinstance(result, dict), "%s должна возвращать словарь" % name)
+    return {key: value for key, value in result.items() if value}
+
+
 def task_1(bank):
     questions, skipped = load(bank, BANK)
     if questions == [] and skipped == 0:
@@ -90,6 +124,12 @@ def task_1(bank):
            "\"id\" и \"level\" должны быть числами: у первого вопроса 1 и 1")
     expect(first["topic"] == "строки" and first["type"] == "один" and first["answer"] == "2",
            "у первого вопроса тема «строки», тип «один», ответ «2»")
+    q23 = by_id(questions, 23)
+    expect(first["options"] == ["print", "input", "int", "len"],
+           "у вопроса 1 \"options\" должен быть списком из четырёх вариантов")
+    expect(q23["options"] == [], "у вопроса типа «короткий» \"options\" — пустой список")
+    expect(q23["text"] == "Что напечатает код?\nitems = [3, 1, 2]\nprint(items[0])",
+           "в \"text\" символы \\n из файла должны стать настоящими переносами строки")
     path = write_temp(SMALL)
     try:
         small, _ = load(bank, path)
@@ -108,49 +148,41 @@ def task_1(bank):
 def task_2(bank):
     if bank.find_question([], 1) is None and bank.question_lines({"text": "a", "options": []}) == []:
         raise NotStarted()
-    questions, _ = load(bank, BANK)
-    q1 = by_id(questions, 1)
-    q23 = by_id(questions, 23)
-    expect(q1["options"] == ["print", "input", "int", "len"],
-           "у вопроса 1 \"options\" должен быть списком из четырёх вариантов")
-    expect(q23["options"] == [], "у вопроса типа «короткий» \"options\" — пустой список")
-    expect(q23["text"] == "Что напечатает код?\nitems = [3, 1, 2]\nprint(items[0])",
-           "в \"text\" символы \\n из файла должны стать настоящими переносами строки")
-    found = bank.find_question(questions, 23)
-    expect(isinstance(found, dict) and found.get("id") == 23,
-           "find_question(вопросы, 23) должна вернуть вопрос с id 23")
+    questions = fresh(READY)
+    found = bank.find_question(questions, 8)
+    expect(isinstance(found, dict) and found.get("id") == 8,
+           "find_question(вопросы, 8) должна вернуть вопрос с id 8")
     expect(bank.find_question(questions, 99) is None,
            "find_question(вопросы, 99) должна вернуть None: такого вопроса нет")
-    expect(bank.question_lines(q1) == ["Какая функция читает строку, которую ввёл человек?",
-                                       "1) print", "2) input", "3) int", "4) len"],
-           "question_lines для вопроса 1: текст, затем варианты «1) print» … «4) len»")
-    expect(bank.question_lines(q23) == ["Что напечатает код?", "items = [3, 1, 2]",
-                                        "print(items[0])"],
-           "question_lines для вопроса 23: три строки текста, вариантов нет")
+    expect(bank.question_lines(questions[0]) == ["Сколько будет 2 + 2?", "1) 3", "2) 4", "3) 5"],
+           "question_lines для вопроса 7: текст, затем варианты «1) 3» … «3) 5»")
+    expect(bank.question_lines(questions[1]) == ["Что напечатает код?", "print(1)",
+                                                 "print(2)"],
+           "question_lines для вопроса 8: три строки текста, вариантов нет")
 
 
 def task_3(bank):
     if bank.count_levels([]) == {} and bank.count_topics([]) == {} and \
             bank.count_levels([{"level": 1, "topic": "строки"}]) == {}:
         raise NotStarted()
-    questions, _ = load(bank, BANK)
-    levels = bank.count_levels(questions)
-    topics = bank.count_topics(questions)
-    expect(levels == {1: 10, 2: 9, 3: 8, 4: 7, 5: 6},
-           "count_levels на datasets/bank.csv вернула %s" % levels)
-    expect(topics == {"строки": 12, "числа": 10, "списки": 9, "ошибки": 9},
-           "count_topics на datasets/bank.csv вернула %s" % topics)
-    path = write_temp(SMALL)
-    try:
-        small, _ = load(bank, path)
-    finally:
-        os.remove(path)
-    small_levels = {key: value for key, value in bank.count_levels(small).items() if value}
-    small_topics = {key: value for key, value in bank.count_topics(small).items() if value}
-    expect(small_levels == {3: 2, 5: 1},
-           "на маленьком банке count_levels должна дать 2 вопроса уровня 3 и 1 — уровня 5")
-    expect(small_topics == {"числа": 2, "ошибки": 1},
-           "на маленьком банке count_topics должна дать 2 вопроса «числа» и 1 — «ошибки»")
+    levels = counted(bank.count_levels(fresh(READY)), "count_levels")
+    topics = counted(bank.count_topics(fresh(READY)), "count_topics")
+    expect(levels == {3: 2, 5: 1},
+           "на готовом списке из трёх вопросов count_levels должна дать 2 вопроса уровня 3 "
+           "и 1 — уровня 5, а вернула %s" % levels)
+    expect(topics == {"числа": 2, "ошибки": 1},
+           "на готовом списке из трёх вопросов count_topics должна дать 2 вопроса «числа» "
+           "и 1 — «ошибки», а вернула %s" % topics)
+    expected_levels = {1: 2, 2: 1, 3: 2, 5: 1}
+    expected_topics = {"строки": 2, "числа": 2, "списки": 1, "ошибки": 1}
+    levels = counted(bank.count_levels(fresh(READY + MORE)), "count_levels")
+    topics = counted(bank.count_topics(fresh(READY + MORE)), "count_topics")
+    expect(levels == expected_levels,
+           "на готовом списке из шести вопросов count_levels вернула %s, а должно быть %s"
+           % (levels, expected_levels))
+    expect(topics == expected_topics,
+           "на готовом списке из шести вопросов count_topics вернула %s, а должно быть %s"
+           % (topics, expected_topics))
 
 
 def task_4(bank):
@@ -173,21 +205,26 @@ def task_4(bank):
            % small_skipped)
 
 
-def task_7(bank):
+def task_8(bank):
     if bank.count_matrix([]) == {} and bank.count_matrix([{"level": 1, "topic": "строки"}]) == {}:
         raise NotStarted()
-    questions, _ = load(bank, BANK)
-    table = bank.count_matrix(questions)
-    expected = {"строки": [4, 2, 3, 3, 0], "числа": [3, 3, 0, 2, 2],
-                "списки": [0, 2, 3, 2, 2], "ошибки": [3, 2, 2, 0, 2]}
-    for topic, row in expected.items():
-        got = [table.get(topic, {}).get(level, 0) for level in [1, 2, 3, 4, 5]]
-        expect(got == row, "count_matrix: для темы «%s» получилось %s, а должно быть %s"
-               % (topic, got, row))
+    checks = [(READY, "на готовом списке из трёх вопросов",
+               {"строки": [0, 0, 0, 0, 0], "числа": [0, 0, 1, 0, 1],
+                "списки": [0, 0, 0, 0, 0], "ошибки": [0, 0, 1, 0, 0]}),
+              (READY + [ADDED], "после добавления вопроса темы «числа» уровня 5",
+               {"строки": [0, 0, 0, 0, 0], "числа": [0, 0, 1, 0, 2],
+                "списки": [0, 0, 0, 0, 0], "ошибки": [0, 0, 1, 0, 0]})]
+    for questions, where, expected in checks:
+        table = bank.count_matrix(fresh(questions))
+        expect(isinstance(table, dict), "count_matrix должна возвращать словарь словарей")
+        for topic, row in expected.items():
+            got = [table.get(topic, {}).get(level, 0) for level in [1, 2, 3, 4, 5]]
+            expect(got == row, "count_matrix %s: для темы «%s» получилось %s, "
+                   "а должно быть %s" % (where, topic, got, row))
 
 
 TASKS = [(1, "Задание 1", task_1), (2, "Задание 2", task_2), (3, "Задание 3", task_3),
-         (4, "Задание 4", task_4), (7, "Задание 7 (дополнительное)", task_7)]
+         (4, "Задание 4", task_4), (8, "Задание 8 (дополнительное)", task_8)]
 
 
 def main():
@@ -202,7 +239,7 @@ def main():
     only = sys.argv[1] if len(sys.argv) > 1 else None
     chosen = [task for task in TASKS if only is None or str(task[0]) == only]
     if not chosen:
-        print("Тесты есть для заданий 1, 2, 3, 4 и 7.")
+        print("Тесты есть для заданий 1, 2, 3, 4 и 8.")
         return 1
     passed, failed, broken = [], [], False
     for number, name, test in chosen:
@@ -212,7 +249,7 @@ def main():
             print("%s: пройдено" % name)
         except NotStarted:
             print("%s: не начато" % name)
-            if number != 7:
+            if number != 8:
                 failed.append(number)
         except Failed as problem:
             failed.append(number)
