@@ -80,7 +80,11 @@ def count_levels(questions):
 
     Возвращает словарь {уровень: число}, например {1: 10, 2: 9, ...}.
     """
-    return {}
+    levels = {}
+    for question in questions:
+        level = question["level"]
+        levels[level] = levels.get(level, 0)+1
+    return levels
 
 
 def count_topics(questions):
@@ -88,7 +92,11 @@ def count_topics(questions):
 
     Возвращает словарь {тема: число}, например {"строки": 12, ...}.
     """
-    return {}
+    topics = {}
+    for question in questions:
+        topic = question["topic"]
+        topics[topic] = topics.get(topic, 0)+1
+    return topics
 
 
 def count_matrix(questions):
