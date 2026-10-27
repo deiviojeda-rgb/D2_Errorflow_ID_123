@@ -19,11 +19,15 @@ def load_bank(path):
         lines.pop(0)
         if lines and lines[-1] == "":
             lines.pop()
-    question_list=[]
-    for item in range(len(lines)):
-        one_line = lines[item].split(";")
 
-        if one_line[5] == "":
+    count = 0
+    question_list=[]
+    for i in range(len(lines)):
+        one_line = lines[i].split(";")
+
+        if len(one_line) != 7 or  not one_line[2].isdigit() or int(one_line[2])>5 or int(one_line[2])<1:
+            count+=1
+        elif one_line[5]=="":
             question_list.append({
                 "id": int(one_line[0]),
                 "topic": one_line [1],
