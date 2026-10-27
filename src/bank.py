@@ -12,29 +12,37 @@ main.py и тесты. Меняй только тела функций — то,
 
 TOPICS = ["строки", "числа", "списки", "ошибки"]
 
-
 def load_bank(path):
-    """Прочитать банк из файла по пути path.
+    with open(path, encoding="utf-8") as source:
+        text = source.read()
+        lines = text.split("\n")
+        lines.pop(0)
+        if lines and lines[-1] == "":
+            lines.pop()
+    question_list=[]
+    for item in range(len(lines)):
+        one_line = lines[item].split(";")
 
-    Возвращает два значения: список вопросов и число пропущенных строк.
-
-    Первая строка файла — заголовок, это не вопрос.
-    Каждый вопрос в списке — словарь с семью ключами:
-
-        {"id": 23, "topic": "списки", "level": 2, "type": "короткий",
-         "text": "Что напечатает код?\\nitems = [3, 1, 2]\\nprint(items[0])",
-         "options": [], "answer": "3"}
-
-    - "id" и "level" — числа, остальное — строки;
-    - в "text" каждые два символа \\n из файла заменены настоящим переносом строки;
-    - "options" — список вариантов; у вопросов типа «короткий» он пустой.
-
-    Задание 1: верни все вопросы файла и 0.
-    Задание 4: испорченные строки не попадают в список, их число — второе значение.
-
-    Если файла нет, ошибку здесь не перехватывай: её перехватывает main.py.
-    """
-    return [], 0
+        if one_line[5] == "":
+            question_list.append({
+                "id": int(one_line[0]),
+                "topic": one_line [1],
+                "level": int(one_line[2]),
+                "type": (one_line[3]),
+                "text": one_line[4].replace("\\n", "\n"),
+                "options":[],
+                "answer": one_line[6]
+            })
+        else: question_list.append({
+                "id": int(one_line[0]),
+                "topic": one_line [1],
+                "level": int(one_line[2]),
+                "type": (one_line[3]),
+                "text": one_line[4].replace("\\n", "\n"),
+                "options":one_line[5].split("|"),
+                "answer": one_line[6]
+            })
+    return question_list, 0
 
 
 def find_question(questions, qid):
