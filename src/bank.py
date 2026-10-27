@@ -50,6 +50,11 @@ def find_question(questions, qid):
 
     Возвращает словарь этого вопроса или None, если такого номера нет.
     """
+
+    for question in questions:
+        if question["id"] == qid:
+            return question
+
     return None
 
 
@@ -59,7 +64,15 @@ def question_lines(question):
     Сначала строки текста вопроса, потом варианты: "1) ...", "2) ..." и так далее.
     Тема, уровень и ответ в эти строки не попадают.
     """
-    return []
+
+    result = []
+    for line in question["text"].split("\n"):
+        result.append(line)
+    counter = 1
+    for option in question["options"]:
+        result.append(str(counter) + ") " + option)
+        counter += 1
+    return result
 
 
 def count_levels(questions):
